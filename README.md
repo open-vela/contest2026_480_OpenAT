@@ -156,4 +156,7 @@ relocation truncated to fit: R_RISCV_HI20 against symbol `__clz_tab'
 
 - 大赛文档：<https://github.com/open-vela/docs/tree/dev-ai-contest-2026/zh-cn/contest_2026>
 - 本仓板级说明：`board/contest_board/README.md`
-- 本仓 PR：#1（初始板级适配）、#2（libgcc 修复）
+- 真机验证日志与复现记录：`docs/verification.md`
+- Agent 工作约束：`agent.md`
+- 本仓 PR：#1（初始板级适配）、#2（libgcc 修复）、#3（文档与启动镜像工具）、
+  #4（agent.md）
