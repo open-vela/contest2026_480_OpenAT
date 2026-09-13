@@ -1,0 +1,41 @@
+/dts-v1/;
+
+/ {
+    description = "NuttX/OpenVela for LicheeRV Nano (SG2002)";
+    #address-cells = <2>;
+
+    images {
+        kernel-1 {
+            description = "NuttX/OpenVela kernel";
+            data = /incbin/("./Image-sg2002");
+            type = "kernel";
+            arch = "riscv";
+            os = "linux";
+            compression = "none";
+            load = <0x0 0x80200000>;
+            entry = <0x0 0x80200000>;
+            hash-1 {
+                algo = "crc32";
+            };
+        };
+
+        fdt-sg2002_licheervnano_sd {
+            description = "LicheeRV Nano Device Tree (SG2002)";
+            data = /incbin/("./sg2002-licheervnano_sd.dtb");
+            type = "flat_dt";
+            arch = "riscv";
+            compression = "none";
+            hash-1 {
+                algo = "crc32";
+            };
+        };
+    };
+
+    configurations {
+        config-sg2002_licheervnano_sd {
+            description = "Boot NuttX/OpenVela with LicheeRV Nano";
+            kernel = "kernel-1";
+            fdt = "fdt-sg2002_licheervnano_sd";
+        };
+    };
+};
