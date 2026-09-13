@@ -1,36 +1,58 @@
-# contest2026_480_OpenAT
+# openvela on LicheeRV Nano (SG2002)
 
-👋 欢迎参加 **2026 首届 openvela AI 硬件开发者大赛**！
+## 一、作品简介
 
-这是组委会为你的队伍创建的**专属参赛仓库**（本仓为样例/模板，队伍编号 `480`；你看到的将是你自己的 `contest2026_<编号>_<队伍名>`）。比赛期间，你的全部参赛代码、打包产物与 AI Coding 日志都提交到这里。
+本作品把 openvela / NuttX 适配到 SOPHGO **SG2002** 芯片的 **LicheeRV Nano**
+开发板上。开发板通过 SD 卡依次加载 FSBL、OpenSBI、U-Boot，再由 U-Boot
+引导 openvela NuttX 内核；系统以 RISC-V S-mode + MMU 运行，串口控制台
+（UART0，115200 8N1）可启动到 NuttShell：
 
-> 本仓既是「代码仓」，又内置了一键拉取整套 openvela 工程的 `repo` 清单（manifest）。你只需跟它打交道，**自始至终只动一个文件夹**。
+```text
+Starting kernel ...
+ABC
+NuttShell (NSH)
+nsh>
+```
 
----
+板级适配代码全部位于本仓 `board/contest_board/`，通过 manifest 的
+`<linkfile>` 映射到 openvela 工作区的
+`vendor/openvela/boards/contest2026_480_board`，对生产仓库零改动。
 
-## 一、先读这些官方文档
+## 二、选题方向
 
-**通用（所有赛道必读）：**
+**新硬件适配赛道**。
 
-| 文档                                                                                                                                     | 用途                                           |
-| ---------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| [《大赛总览》](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/contest_overview.md)                        | 赛道、流程、评分、资源，建议先通读             |
-| [《参赛代码提交指南》](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/code_submission_guide.md)           | 仓库获取、提交流程、时间与权限（**以此为准**） |
-| [《AI Coding 日志归集与提交手册》](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/ai_coding_log_guide.md) | 如何导出 AI 对话日志并提交到 `logs/`           |
+SG2002 / LicheeRV Nano 此前没有 openvela 官方适配。本作品完成了：
 
-**按你的赛道选读（三选一）：**
+- 芯片级启动适配：S-mode、MMU、Sv39 页表、物理内存布局；
+- 板级适配：defconfig、链接脚本、UART0 控制台、ROMFS/initrd 启动；
+- 构建系统集成：基于 openvela 官方 `build.sh` 的板级 config 路径；
+- 工具链适配：解决官方预编译 `riscv-none-elf` libgcc 在
+  `0xc0000000` 高虚拟地址下的链接问题（见第六节）；
+- 真机验证：FSBL → OpenSBI → U-Boot → NuttX → NSH 全链路启动成功。
 
-| 赛道                  | 教程导航                                                                                                                                                 |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 快应用 / 手表应用创新 | [快应用教程导航](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/quickapp/quickapp_guide_index.md)                         |
-| AI 硬件产品创新       | [AI 硬件赛道教程导航](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/ai_hardware/ai_hardware_guide_index.md)              |
-| 新硬件适配            | [新硬件适配赛道教程导航](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/hardware_porting/hardware_porting_guide_index.md) |
+## 三、目录结构
 
----
+```text
+board/contest_board/                 # SG2002 / LicheeRV Nano 板级适配
+├── configs/nsh/defconfig            # 最小 NSH defconfig（UART0、MMU、kernel build）
+├── include/board.h
+├── include/board_memorymap.h        # 内存/UART/PLIC 地址
+├── scripts/Make.defs                # 板级编译规则
+├── scripts/ld.script                # kernel 链接脚本
+├── src/sg2000_appinit.c             # 板级初始化
+├── src/sg2002_libgcc_fix.c          # RISC-V libgcc 兼容函数
+├── Kconfig
+└── README.md                        # 板级适配说明与镜像制作步骤
 
-## 二、第一步：拉取完整工程
+app/hello_app/                       # 官方示例骨架（本作品未使用）
+quickapp/hello_quickapp/             # 官方示例骨架（本作品未使用）
+logs/                                # AI Coding 日志（按 GitHub 账号/日期归档）
+```
 
-用组委会提供的命令一键拉取「openvela 全量源码 + 你的专属仓」：
+## 四、运行方式
+
+### 1. 获取 openvela 工作区
 
 ```bash
 repo init -u https://github.com/open-vela/contest2026_480_OpenAT \
@@ -38,111 +60,100 @@ repo init -u https://github.com/open-vela/contest2026_480_OpenAT \
 repo sync -c -j8
 ```
 
-同步后，你的整个仓库位于工作区的 `contest2026_480_OpenAT/`，openvela 全量源码在外层（`nuttx/`、`apps/`、`packages/`、`vendor/` 等）。
+同步后，本仓位于工作区根目录的 `contest2026_480_OpenAT/`，板级代码通过
+linkfile 映射到 `vendor/openvela/boards/contest2026_480_board`。
 
----
+### 2. 编译 NuttX 内核
 
-## 三、第二步：在哪里写代码
-
-**只在自己的仓目录 `contest2026_480_OpenAT/` 里开发。** 不同作品形态放在对应子目录，manifest 会通过 `<linkfile>` 把它们**软链**到 openvela 编译树该在的位置——你不用手动 copy：
-
-| 作品形态 | 你的代码放这里             | 系统自动映射到                                 |
-| -------- | -------------------------- | ---------------------------------------------- |
-| 应用     | `app/hello_app/`           | `packages/demos/contest2026_480_hello_app`     |
-| 快应用   | `quickapp/hello_quickapp/` | `packages/apps/contest2026_480_hello_quickapp` |
-| 板级适配 | `board/contest_board/`     | `vendor/openvela/boards/contest2026_480_board` |
-
-> 用不到的形态目录可以删掉；新增作品时按同样规则加子目录，并在 `contest2026_480_OpenAT.xml` 里补一条 `<linkfile>` 映射即可。**生产仓库（packages/nuttx/vendor 等）零改动。**
-
-建议仓库目录约定（便于评委定位）：
-
-```text
-app/ | quickapp/ | board/   # 你的作品代码
-logs/                       # AI Coding 日志（主动导出后提交，格式见 logs/README.md）
-README.md                   # 作品说明（提交前请改成你自己的，见第六节）
-```
-
-> 仓内附带了一个 `.gitignore.example`，给出了**编译产物**等不需要进仓的文件示例。如需启用，`cp .gitignore.example .gitignore` 后按需增删即可。**注意 `logs/` 下最终导出的 AI Coding 日志必须提交，不要忽略。**
->
-> `logs/` 的目录结构与提交格式见 [logs/README.md](logs/README.md)。
-
----
-
-## 四、第三步：编译与运行
-
-编译/运行步骤随作品形态不同而不同，请参考你所在赛道的教程导航：
-
-- 快应用 / 手表应用：[快应用教程导航](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/quickapp/quickapp_guide_index.md)（含模拟器与开发板部署）。
-- AI 硬件产品创新：[AI 硬件赛道教程导航](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/ai_hardware/ai_hardware_guide_index.md)（环境搭建、编译烧录、Skill 开发）。
-- 新硬件适配：[新硬件适配赛道教程导航](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/hardware_porting/hardware_porting_guide_index.md)（BSP 移植、最小 NSH 基线）。
-
-子目录已通过 manifest 中的 `<linkfile>` 软链进 openvela 编译树，因此构建在 openvela 工作区**根目录**（即你这个仓的上一级）进行。openvela 使用 `build.sh` 作为统一入口，接收一个 **board config 路径**作为参数：
+在 openvela 工作区根目录执行：
 
 ```bash
-# 进入 openvela 工作区根目录（你的仓的上一级）
-cd ..
-
-# 通用语法：第一个参数是 board config 路径，第二个参数可以是 menuconfig / distclean 等
-./build.sh <board-config-path> [menuconfig|distclean] [-j8]
+./build.sh vendor/openvela/boards/contest2026_480_board/configs/nsh -j8
 ```
 
-> 具体的 board config 路径、目标产物、模拟器/真机部署方式请以你所在赛道的教程导航为准。本仓 `app/` `quickapp/` `board/` 三个示例骨架对应的 Kconfig 选项可通过 `menuconfig` 启用。
+编译产物：
 
----
+```text
+nuttx/nuttx
+nuttx/nuttx.bin
+nuttx/nuttx.hex
+nuttx/System.map
+```
 
-## 五、第四步：提交作品
+本次验证的内存占用：
 
-1. **fork** 你的专属仓 → 开发 → `git commit` 并推送 → 向专属仓发起 **Pull Request**，可**自行 review 并合入**（无需等组委会）。
-2. **AI Coding 日志**：与 AI 工具的对话会自动记录到本机 staging（不会自动上传），需你**主动导出/打包**选定会话到仓内 `logs/` 目录后一并提交。详见[《AI Coding 日志归集与提交手册》](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/ai_coding_log_guide.md)。
-3. 若需改动 **nuttx 等公共仓库**，不在本仓改，而是 fork 对应公共仓、以 PR 提交到 `dev-ai-contest-2026` 分支，由组委会 review 后合入。
+```text
+kflash: 188036 B / 2 MB (8.97%)
+ksram:  48 KB / 2 MB (2.34%)
+```
 
-> ⏰ **提交作品截止：9 月 20 日**。截止后统一收回 push 权限，仍可查看 / clone。
->
-> 获奖后再按要求将作品 PR 至 openvela 上游对应仓库（走标准 PR + CI 流程）。
+### 3. 制作可启动 SD 卡
 
-### 关于 PR 与 CLA
+openvela 使用 `CONFIG_BUILD_KERNEL=y` 的内核 + 用户态 initrd 方案，
+NuttX 内核以 `Image-sg2002` 的形式打包：
 
-- 本仓所有改动通过 **Pull Request** 合入（分支保护强制，可自行合入自己的 PR）。
-- 首次贡献需在[**官网签署 CLA**](https://openvela.com/#/community/cla)；PR 上会自动跑 `cla/signature` 检查，在官网签署成功后，在 PR 评论 `/check-cla` 复检即可通过。
+```text
+Image-sg2002 = nuttx.bin + 64 KiB 零填充 + initrd
+```
 
----
+`initrd` 由 NuttX `make export`、apps 的 `make import` 与 `genromfs`
+生成；FIT 镜像 `boot.sd` 使用 U-Boot `mkimage` 打包 `Image-sg2002` 和
+LicheeRV Nano 设备树。完整命令见
+`board/contest_board/README.md` 的 “Boot image” 一节。把 `fip.bin`、
+`boot.sd` 放入 SD 卡 FAT32 分区根目录即可由 U-Boot 自动启动。
 
-## 六、提交前：把本 README 改成你的作品说明
+### 4. 串口
 
-本文件目前是组委会给的**使用说明书**。**作品提交前，请把它替换成你自己作品的说明**，方便评委快速了解你做了什么、怎么跑起来。建议至少包含以下内容：
-
-```markdown
-# <你的作品名>
-
-## 一、作品简介
-<一句话/一段话说明这个作品是什么、解决什么问题、亮点在哪>
-
-## 二、选题方向
-<快应用 / 手表应用创新 ｜ AI 硬件产品创新 ｜ 新硬件适配 ｜ 自定方向，并简述理由>
-
-## 三、目录结构
-<列出你这个仓里各目录/文件的作用，例如：>
-- `app/xxx/`        — <说明>
-- `board/xxx/`      — <说明>
-- `quickapp/xxx/`   — <说明>
-- `logs/`           — AI Coding 日志
-- `docs/` 或其他    — <说明>
-
-## 四、运行方式
-<拉取工程后，如何编译、烧录/部署、运行的完整步骤；最好能让评委照着一步步复现>
+```text
+UART0: 0x04140000
+PLIC source: 44
+NuttX IRQ: 69
+115200 8N1
+```
 
 ## 五、AI Coding 使用说明
-<说明本作品如何借助 AI 辅助开发：
-- 在需求拆解 / 方案设计 / 编码 / 调试 / 文档等环节如何与 AI 协作；
-- AI 对开发效率或质量带来的实际帮助。
-完整对话日志见 logs/ 目录>
+
+本作品的芯片移植、内存布局推导、链接脚本调试、构建错误排查以及真机启动
+日志分析均借助 AI Coding 完成。AI 在以下环节提供了帮助：
+
+- 从 SG2002 参考 SDK 中定位 UART/PLIC/DRAM 地址并整理 NuttX 配置；
+- 分析 U-Boot `booti` 对 RISC-V Image 的要求，构造 FIT 与
+  `Image-sg2002` 布局；
+- 定位并修复 NuttX `libelf_findsymbol()` 空指针 panic；
+- 定位官方 `riscv-none-elf` libgcc `R_RISCV_HI20` 链接错误并给出修复；
+- 整理适配文档与复现步骤。
+
+AI 对话日志见 `logs/yydawx/` 目录。
+
+## 六、工具链说明
+
+openvela 预编译的 `riscv-none-elf` GCC 13.4.0 中，`libgcc.a` 以
+`-mcmodel=medlow` 编译。它的 `__clzdi2()` / `__ffsdi2()` 会通过
+`R_RISCV_HI20` 引用本地 `__clz_tab`，在 kernel 链接到 `0xc0000000`
+高虚拟地址时无法重定位：
+
+```text
+relocation truncated to fit: R_RISCV_HI20 against symbol `__clz_tab'
 ```
 
-> 提示：将会根据「作品本身 + 你的 README 说明 + `logs/` 里的 AI Coding 日志」来理解和评估你的作品，README 写清楚很重要。
+`board/contest_board/src/sg2002_libgcc_fix.c` 提供了 medany 安全的
+`__clzsi2` / `__clzdi2` / `__ffssi2` / `__ffsdi2` 实现，避免链接器从
+预编译 libgcc 中拉取不兼容的 `_clzsi2.o` / `_ffssi2.o`。
 
----
+## 七、公共仓库修复
 
-## 附：仓库命名规范
+板子仍然需要 NuttX 公共仓库的一处修复才能运行 ELF 用户态程序：
 
-`contest2026_<编号>_<队伍名>` — 编号三位零填充；队名 slug（全小写、英文/拼音、连字符）。例：`contest2026_480_OpenAT`。
-（仓库由组委会统一创建，**每队仅一个仓**，无需自行命名。）
+- `libs/libc/elf/elf_symbols.c::libelf_findsymbol()` 未跳过 ELF 符号表
+  中未命名的第 0 项，会以 NULL `iobuffer` 调用 `strcmp()`，导致内核在
+  `elf_loadbinary()` 中 load access fault。
+
+修复已提交到 NuttX `dev-ai-contest-2026` 分支：
+
+- PR: <https://github.com/open-vela/nuttx/pull/381>
+
+## 八、参考链接
+
+- 大赛文档：<https://github.com/open-vela/docs/tree/dev-ai-contest-2026/zh-cn/contest_2026>
+- 本仓板级说明：`board/contest_board/README.md`
+- 本仓 PR：#1（初始板级适配）、#2（libgcc 修复）
