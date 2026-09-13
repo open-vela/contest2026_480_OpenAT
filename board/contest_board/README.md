@@ -43,3 +43,16 @@ OpenVela NuttX `dev-ai-contest-2026` currently has a bug in
 `libs/libc/elf/elf_symbols.c::libelf_findsymbol()`: it does not skip
 unnamed ELF symbols and dereferences a NULL `iobuffer` with `strcmp()`.
 This board requires the fix (see team repo `patches/` or the upstream PR).
+
+## Toolchain workaround
+
+The prebuilt openvela `riscv-none-elf` GCC 13.4.0 toolchain contains a
+`libgcc.a` built with `-mcmodel=medlow`.  The `__clzdi2()` and `__ffsdi2()`
+helpers in that archive reference the local `__clz_tab` symbol with
+`R_RISCV_HI20`, which cannot be relocated when the MMU kernel is linked at
+its high virtual address (`0xc0000000`).
+
+`src/sg2002_libgcc_fix.c` provides medany-safe implementations of the four
+`libgcc` helpers (`__clzsi2`, `__clzdi2`, `__ffssi2`, `__ffsdi2`) so the
+linker does not pull the incompatible `_clzsi2.o` / `_ffssi2.o` objects out
+of the prebuilt archive.
