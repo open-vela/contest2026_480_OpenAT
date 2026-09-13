@@ -1,11 +1,6 @@
 #
-# Contest 2026 team 000 board placeholder
+# Contest 2026 team 480 board: LicheeRV Nano / SG2002
 #
-
-if ARCH_BOARD_CONTEST2026_000_BOARD
-
-config ARCH_BOARD_CONTEST2026_000_BOARD_TAG
-	string "Board tag"
-	default "contest2026_000_board"
-
-endif
+# This is an out-of-tree custom board.  No additional Kconfig symbols are
+# required; the architecture and chip selection come from NuttX core.
+#
